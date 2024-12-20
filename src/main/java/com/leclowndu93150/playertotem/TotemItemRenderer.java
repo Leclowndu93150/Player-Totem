@@ -88,7 +88,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         playerModel.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
 
         int maxLight = 0xF000F0;
-        playerModel.renderToBuffer(poseStack, vertexConsumer, maxLight, OverlayTexture.NO_OVERLAY, 1);
+        playerModel.renderToBuffer(poseStack, vertexConsumer, maxLight, OverlayTexture.NO_OVERLAY, -1);
 
         poseStack.popPose();
 
