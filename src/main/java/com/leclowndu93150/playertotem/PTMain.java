@@ -26,7 +26,8 @@ public class PTMain {
     @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static class ClientSetup {
 
-        public static final TotemItemRenderer TOTEM_ITEM_RENDERER = new TotemItemRenderer();
+        static TotemItemRenderer TOTEM_ITEM_RENDERER = new TotemItemRenderer();
+
 
         @SubscribeEvent
         public static void registerClientExtensions(RegisterClientExtensionsEvent event) {

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -21,9 +22,11 @@ import net.minecraft.world.item.ItemStack;
 public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
     private PlayerModel<AbstractClientPlayer> playerModel;
+    private ResourceLocation customSkin;
 
     public TotemItemRenderer() {
         super(Minecraft.getInstance().getBlockEntityRenderDispatcher(), Minecraft.getInstance().getEntityModels());
+        this.customSkin = ResourceLocation.fromNamespaceAndPath("playertotem", "textures/entity/steve.png");
     }
 
     private void initializeModel() {
@@ -32,6 +35,10 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
             ModelPart modelPart = entityModelSet.bakeLayer(ModelLayers.PLAYER);
             this.playerModel = new PlayerModel<>(modelPart, false);
         }
+    }
+
+    public void setCustomSkin(ResourceLocation skin) {
+        this.customSkin = skin;
     }
 
     @Override
@@ -68,20 +75,38 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
                 poseStack.scale(0.4F, -0.4F, 0.4F);
             }
         }
-        LocalPlayer player = Minecraft.getInstance().player;
-        if (player != null) {
-            ResourceLocation skinLocation = player.getSkin().texture();
-            VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityTranslucent(skinLocation));
 
-            this.playerModel.setAllVisible(true);
-            this.playerModel.head.xRot = -0.5F;
-            this.playerModel.hat.xRot = -0.5F;
+        ResourceLocation skinLocation = customSkin != null ? customSkin : Minecraft.getInstance().player.getSkin().texture();
+        VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entitySolid(skinLocation));
 
-            float tick = Minecraft.getInstance().player.tickCount;
-            playerModel.setupAnim(player, 0, 0, tick, 0, 0);
+        this.playerModel.setAllVisible(true);
+        this.playerModel.young = false;
+        this.playerModel.head.xRot = -0.5F;
+        this.playerModel.hat.xRot = -0.5F;
 
-            playerModel.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, 1);
-        }
+        float tick = Minecraft.getInstance().player.tickCount;
+        playerModel.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
+
+        int maxLight = 0xF000F0;
+        playerModel.renderToBuffer(poseStack, vertexConsumer, maxLight, OverlayTexture.NO_OVERLAY, 1);
+
+        poseStack.popPose();
+
+        poseStack.pushPose();
+        poseStack.translate(0, 1, 0);
+        poseStack.scale(0.01F, 0.01F, 0.01F);
+
+        Minecraft.getInstance().font.drawInBatch(
+                customSkin != null ? customSkin.toString() : "Default Skin",
+                0, 0,
+                0xFFFFFF,
+                false,
+                poseStack.last().pose(),
+                buffer,
+                Font.DisplayMode.NORMAL,
+                0,
+                combinedLight
+        );
 
         poseStack.popPose();
     }
