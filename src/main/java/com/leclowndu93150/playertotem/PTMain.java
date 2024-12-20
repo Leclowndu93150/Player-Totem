@@ -28,14 +28,11 @@ public class PTMain {
     @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static class ClientSetup {
 
-        static {
-            System.out.println("Client class loaded");
-        }
-
         public static final TotemItemRenderer TOTEM_ITEM_RENDERER = new TotemItemRenderer();
 
         @SubscribeEvent
         public static void registerClientExtensions(RegisterClientExtensionsEvent event) {
+            LOGGER.info("Registering client extensions");
             event.registerItem(new IClientItemExtensions() {
                 @Override
                 public @NotNull BlockEntityWithoutLevelRenderer getCustomRenderer() {
