@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -64,16 +65,36 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
                 MojangProfileResponse profileData = GSON.fromJson(profileResponse, MojangProfileResponse.class);
 
                 String skinUrl = profileData.getSkinURL();
-                NativeImage nativeImage = NativeImage.read(new URL(skinUrl).openStream());
-                DynamicTexture texture = new DynamicTexture(nativeImage);
+                if (skinUrl == null || skinUrl.isEmpty()) {
+                    throw new IOException("Skin URL is null or empty");
+                }
 
-                ResourceLocation textureLocation = ResourceLocation.fromNamespaceAndPath("playertotem", "skin_" + username.toLowerCase());
-                Minecraft.getInstance().getTextureManager().register(textureLocation, texture);
+                NativeImage nativeImage;
+                try (var stream = new URL(skinUrl).openStream()) {
+                    nativeImage = NativeImage.read(stream);
+                }
 
-                skinCache.put(username, textureLocation);
+                if (nativeImage == null) {
+                    throw new IOException("Failed to load NativeImage (null result)");
+                }
+
+                Minecraft.getInstance().execute(() -> {
+                    try {
+                        DynamicTexture texture = new DynamicTexture(nativeImage);
+                        ResourceLocation textureLocation = ResourceLocation.fromNamespaceAndPath("playertotem", "skin_" + username.toLowerCase());
+                        Minecraft.getInstance().getTextureManager().register(textureLocation, texture);
+                        skinCache.put(username, textureLocation);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        skinCache.put(username, Minecraft.getInstance().player.getSkin().texture());
+                        nativeImage.close();
+                    }
+                });
             } catch (Exception e) {
                 e.printStackTrace();
-                skinCache.put(username, Minecraft.getInstance().player.getSkin().texture());
+                Minecraft.getInstance().execute(() ->
+                        skinCache.put(username, Minecraft.getInstance().player.getSkin().texture())
+                );
             }
         });
     }
@@ -98,11 +119,16 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         ResourceLocation skinLocation;
         if (stack.has(DataComponents.CUSTOM_NAME)) {
             String customName = stack.get(DataComponents.CUSTOM_NAME).getString();
-            loadSkinForName(customName);
+            boolean canUpdateSkin = Minecraft.getInstance().screen == null
+                    || Minecraft.getInstance().screen instanceof InventoryScreen;
+            if (canUpdateSkin){
+                loadSkinForName(customName);
+            }
             skinLocation = skinCache.getOrDefault(customName, Minecraft.getInstance().player.getSkin().texture());
         } else {
             skinLocation = Minecraft.getInstance().player.getSkin().texture();
         }
+
 
         poseStack.pushPose();
         switch (displayContext) {
