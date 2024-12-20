@@ -1,7 +1,6 @@
 package com.leclowndu93150.playertotem;
 
 import com.mojang.logging.LogUtils;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.world.item.Items;
 import net.neoforged.api.distmarker.Dist;
@@ -10,7 +9,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import org.jetbrains.annotations.NotNull;
@@ -36,7 +34,6 @@ public class PTMain {
             event.registerItem(new IClientItemExtensions() {
                 @Override
                 public @NotNull BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                    System.out.println("Custom renderer registered for Totem of Undying");
                     return TOTEM_ITEM_RENDERER;
                 }
             }, Items.TOTEM_OF_UNDYING);

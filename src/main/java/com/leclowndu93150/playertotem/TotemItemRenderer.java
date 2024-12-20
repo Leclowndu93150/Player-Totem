@@ -60,7 +60,6 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
             playerModel.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, 1);
         }
 
-        System.out.println("Rendering totem item");
         poseStack.popPose();
     }
 }
