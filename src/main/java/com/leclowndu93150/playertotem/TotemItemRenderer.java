@@ -26,7 +26,8 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
     public TotemItemRenderer() {
         super(Minecraft.getInstance().getBlockEntityRenderDispatcher(), Minecraft.getInstance().getEntityModels());
-        this.customSkin = ResourceLocation.fromNamespaceAndPath("playertotem", "textures/entity/steve.png");
+        //this.customSkin = ResourceLocation.fromNamespaceAndPath("playertotem", "textures/entity/steve.png");
+        this.customSkin = null;
     }
 
     private void initializeModel() {
@@ -72,12 +73,13 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
                 poseStack.scale(0.25F, 0.25F, 0.25F);
             }
             default -> {
-                poseStack.scale(0.4F, -0.4F, 0.4F);
+                poseStack.scale(0.4F, 0.4F, 0.4F);
+                poseStack.mulPose(Axis.XP.rotationDegrees(180));
             }
         }
 
         ResourceLocation skinLocation = customSkin != null ? customSkin : Minecraft.getInstance().player.getSkin().texture();
-        VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entitySolid(skinLocation));
+        VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityTranslucent(skinLocation));
 
         this.playerModel.setAllVisible(true);
         this.playerModel.young = false;
