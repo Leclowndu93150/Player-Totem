@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.EntityModelSet;
@@ -24,26 +25,32 @@ import net.minecraft.world.item.ItemStack;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
 public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static final Gson GSON = new Gson();
     private final Map<String, String> uuidCache = new HashMap<>();
+    private final Map<String, ResourceLocation> skinCache = new HashMap<>();
 
     private PlayerModel<AbstractClientPlayer> playerModel;
-    private final Map<String, ResourceLocation> skinCache = new HashMap<>();
+    private PlayerModel<AbstractClientPlayer> slimPlayerModel;
 
     public TotemItemRenderer() {
         super(Minecraft.getInstance().getBlockEntityRenderDispatcher(), Minecraft.getInstance().getEntityModels());
     }
 
-    private void initializeModel() {
-        if (playerModel == null) {
+    private void initializeModels() {
+        if (playerModel == null || slimPlayerModel == null) {
             EntityModelSet entityModelSet = Minecraft.getInstance().getEntityModels();
             ModelPart modelPart = entityModelSet.bakeLayer(ModelLayers.PLAYER);
+            ModelPart slimModelPart = entityModelSet.bakeLayer(ModelLayers.PLAYER_SLIM);
+
             this.playerModel = new PlayerModel<>(modelPart, false);
+            this.slimPlayerModel = new PlayerModel<>(slimModelPart, true);
         }
     }
 
@@ -61,7 +68,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         CompletableFuture.runAsync(() -> {
             try {
                 String profileUrl = String.format("https://sessionserver.mojang.com/session/minecraft/profile/%s", uuid);
-                String profileResponse = new java.util.Scanner(new URL(profileUrl).openStream()).useDelimiter("\\A").next();
+                String profileResponse = new Scanner(new URL(profileUrl).openStream()).useDelimiter("\\A").next();
                 MojangProfileResponse profileData = GSON.fromJson(profileResponse, MojangProfileResponse.class);
 
                 String skinUrl = profileData.getSkinURL();
@@ -102,7 +109,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
     private String fetchUUIDFromAPI(String username) {
         try {
             String uuidUrl = String.format("https://api.mojang.com/users/profiles/minecraft/%s", username);
-            String response = new java.util.Scanner(new URL(uuidUrl).openStream()).useDelimiter("\\A").next();
+            String response = new Scanner(new URL(uuidUrl).openStream()).useDelimiter("\\A").next();
             MojangUUIDResponse uuidData = GSON.fromJson(response, MojangUUIDResponse.class);
             return uuidData.id;
         } catch (IOException e) {
@@ -114,74 +121,70 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
     @Override
     public void renderByItem(ItemStack stack, ItemDisplayContext displayContext, PoseStack poseStack,
                              MultiBufferSource buffer, int combinedLight, int combinedOverlay) {
-        initializeModel();
+        initializeModels();
 
         ResourceLocation skinLocation;
         if (stack.has(DataComponents.CUSTOM_NAME)) {
-            String customName = stack.get(DataComponents.CUSTOM_NAME).getString();
-            boolean canUpdateSkin = Minecraft.getInstance().screen == null
-                    || Minecraft.getInstance().screen instanceof InventoryScreen;
-            if (canUpdateSkin){
-                loadSkinForName(customName);
+            String username = stack.get(DataComponents.CUSTOM_NAME).getString();
+            if (!username.isEmpty() && (Minecraft.getInstance().screen == null || Minecraft.getInstance().screen instanceof InventoryScreen || Minecraft.getInstance().screen instanceof CreativeModeInventoryScreen)) {
+                loadSkinForName(username);
             }
-            skinLocation = skinCache.getOrDefault(customName, Minecraft.getInstance().player.getSkin().texture());
-        } else {
+            skinLocation = skinCache.getOrDefault(username, Minecraft.getInstance().player.getSkin().texture());
+        }else {
             skinLocation = Minecraft.getInstance().player.getSkin().texture();
         }
 
 
         poseStack.pushPose();
         switch (displayContext) {
-            case THIRD_PERSON_RIGHT_HAND:
+            case THIRD_PERSON_RIGHT_HAND -> {
                 poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.5,-0.6,-0.5);
+                poseStack.translate(0.5, -0.6, -0.5);
                 poseStack.mulPose(Axis.YP.rotationDegrees(90f));
                 poseStack.scale(0.3F, 0.3F, 0.3F);
-                break;
-            case THIRD_PERSON_LEFT_HAND:
+            }
+            case THIRD_PERSON_LEFT_HAND -> {
                 poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.5,-0.6,-0.5);
+                poseStack.translate(0.5, -0.6, -0.5);
                 poseStack.mulPose(Axis.YP.rotationDegrees(270f));
                 poseStack.scale(0.3F, 0.3F, 0.3F);
-                break;
-            case FIRST_PERSON_RIGHT_HAND:
+            }
+            case FIRST_PERSON_RIGHT_HAND -> {
                 poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.60,-0.80,-0.45);
+                poseStack.translate(0.60, -0.80, -0.45);
                 poseStack.mulPose(Axis.YP.rotationDegrees(70f));
                 poseStack.scale(0.3F, 0.3F, 0.3F);
-                break;
-            case FIRST_PERSON_LEFT_HAND:
+            }
+            case FIRST_PERSON_LEFT_HAND -> {
                 poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.3,-0.80,-0.45);
+                poseStack.translate(0.3, -0.80, -0.45);
                 poseStack.mulPose(Axis.YP.rotationDegrees(280f));
                 poseStack.scale(0.3F, 0.3F, 0.3F);
-                break;
-            case GROUND:
+            }
+            case GROUND -> {
                 poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.5,-0.55,-0.5);
+                poseStack.translate(0.5, -0.55, -0.5);
                 poseStack.scale(0.19F, 0.2F, 0.2F);
-                break;
-            case GUI:
+            }
+            case GUI -> {
                 poseStack.translate(0.5D, 0.75D, 0D);
                 poseStack.mulPose(Axis.XP.rotationDegrees(-180f));
                 poseStack.scale(0.5F, 0.5F, 0.49F);
-                break;
-            case FIXED:
+            }
+            case FIXED -> {
                 poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.5,-0.7,-0.5);
+                poseStack.translate(0.5, -0.7, -0.5);
                 poseStack.mulPose(Axis.YP.rotationDegrees(180f));
                 poseStack.scale(0.5F, 0.5F, 0.5F);
-                break;
+            }
         }
 
         VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityTranslucent(skinLocation));
-
-        this.playerModel.setAllVisible(true);
-        this.playerModel.young = false;
+        playerModel.setAllVisible(true);
+        playerModel.young = false;
 
         float tick = Minecraft.getInstance().player.tickCount;
         playerModel.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
-
         playerModel.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, -1);
 
         poseStack.popPose();
@@ -189,7 +192,6 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
     private static class MojangUUIDResponse {
         String id;
-        String name;
     }
 
     private static class MojangProfileResponse {
@@ -198,9 +200,9 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         Property[] properties;
 
         String getSkinURL() {
-            for (Property prop : properties) {
-                if (prop.name.equals("textures")) {
-                    String decoded = new String(java.util.Base64.getDecoder().decode(prop.value));
+            for (Property property : properties) {
+                if ("textures".equals(property.name)) {
+                    String decoded = new String(Base64.getDecoder().decode(property.value));
                     TexturesResponse textures = GSON.fromJson(decoded, TexturesResponse.class);
                     return textures.textures.SKIN.url;
                 }
