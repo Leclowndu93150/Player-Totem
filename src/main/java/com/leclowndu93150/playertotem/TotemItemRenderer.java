@@ -35,6 +35,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static final Gson GSON = new Gson();
     private final Map<String, String> uuidCache = new HashMap<>();
     private final Map<String, ResourceLocation> skinCache = new HashMap<>();
+    private final Map<String, Boolean> slimModelCache = new HashMap<>();
 
     private PlayerModel<AbstractClientPlayer> playerModel;
     private PlayerModel<AbstractClientPlayer> slimPlayerModel;
@@ -54,6 +55,18 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         }
     }
 
+    private String fetchUUIDFromAPI(String username) {
+        try {
+            String uuidUrl = String.format("https://api.mojang.com/users/profiles/minecraft/%s", username);
+            String response = new Scanner(new URL(uuidUrl).openStream()).useDelimiter("\\A").next();
+            MojangUUIDResponse uuidData = GSON.fromJson(response, MojangUUIDResponse.class);
+            return uuidData.id;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     private void loadSkinForName(String username) {
         if (skinCache.containsKey(username)) {
             return;
@@ -62,6 +75,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         String uuid = uuidCache.computeIfAbsent(username, this::fetchUUIDFromAPI);
         if (uuid == null || uuid.isEmpty()) {
             skinCache.put(username, Minecraft.getInstance().player.getSkin().texture());
+            slimModelCache.put(username, false);
             return;
         }
 
@@ -72,6 +86,8 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
                 MojangProfileResponse profileData = GSON.fromJson(profileResponse, MojangProfileResponse.class);
 
                 String skinUrl = profileData.getSkinURL();
+                boolean isSlimModel = profileData.isSlimModel();
+
                 if (skinUrl == null || skinUrl.isEmpty()) {
                     throw new IOException("Skin URL is null or empty");
                 }
@@ -91,31 +107,22 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
                         ResourceLocation textureLocation = ResourceLocation.fromNamespaceAndPath("playertotem", "skin_" + username.toLowerCase());
                         Minecraft.getInstance().getTextureManager().register(textureLocation, texture);
                         skinCache.put(username, textureLocation);
+                        slimModelCache.put(username, isSlimModel);
                     } catch (Exception e) {
                         e.printStackTrace();
                         skinCache.put(username, Minecraft.getInstance().player.getSkin().texture());
+                        slimModelCache.put(username, false);
                         nativeImage.close();
                     }
                 });
             } catch (Exception e) {
                 e.printStackTrace();
-                Minecraft.getInstance().execute(() ->
-                        skinCache.put(username, Minecraft.getInstance().player.getSkin().texture())
-                );
+                Minecraft.getInstance().execute(() -> {
+                    skinCache.put(username, Minecraft.getInstance().player.getSkin().texture());
+                    slimModelCache.put(username, false);
+                });
             }
         });
-    }
-
-    private String fetchUUIDFromAPI(String username) {
-        try {
-            String uuidUrl = String.format("https://api.mojang.com/users/profiles/minecraft/%s", username);
-            String response = new Scanner(new URL(uuidUrl).openStream()).useDelimiter("\\A").next();
-            MojangUUIDResponse uuidData = GSON.fromJson(response, MojangUUIDResponse.class);
-            return uuidData.id;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
     }
 
     @Override
@@ -124,16 +131,22 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         initializeModels();
 
         ResourceLocation skinLocation;
+        boolean isSlimModel = false;
+
         if (stack.has(DataComponents.CUSTOM_NAME)) {
             String username = stack.get(DataComponents.CUSTOM_NAME).getString();
-            if (!username.isEmpty() && (Minecraft.getInstance().screen == null || Minecraft.getInstance().screen instanceof InventoryScreen || Minecraft.getInstance().screen instanceof CreativeModeInventoryScreen)) {
+            if (!username.isEmpty() && (Minecraft.getInstance().screen == null ||
+                    Minecraft.getInstance().screen instanceof InventoryScreen ||
+                    Minecraft.getInstance().screen instanceof CreativeModeInventoryScreen)) {
                 loadSkinForName(username);
             }
             skinLocation = skinCache.getOrDefault(username, Minecraft.getInstance().player.getSkin().texture());
-        }else {
+            isSlimModel = slimModelCache.getOrDefault(username, false);
+        } else {
             skinLocation = Minecraft.getInstance().player.getSkin().texture();
         }
 
+        PlayerModel<AbstractClientPlayer> modelToUse = isSlimModel ? slimPlayerModel : playerModel;
 
         poseStack.pushPose();
         switch (displayContext) {
@@ -180,18 +193,14 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         }
 
         VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityTranslucent(skinLocation));
-        playerModel.setAllVisible(true);
-        playerModel.young = false;
+        modelToUse.setAllVisible(true);
+        modelToUse.young = false;
 
         float tick = Minecraft.getInstance().player.tickCount;
-        playerModel.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
-        playerModel.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, -1);
+        modelToUse.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
+        modelToUse.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, -1);
 
         poseStack.popPose();
-    }
-
-    private static class MojangUUIDResponse {
-        String id;
     }
 
     private static class MojangProfileResponse {
@@ -209,11 +218,27 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
             }
             return null;
         }
+
+        boolean isSlimModel() {
+            for (Property property : properties) {
+                if ("textures".equals(property.name)) {
+                    String decoded = new String(Base64.getDecoder().decode(property.value));
+                    TexturesResponse textures = GSON.fromJson(decoded, TexturesResponse.class);
+                    return textures.textures.SKIN.metadata != null &&
+                            "slim".equals(textures.textures.SKIN.metadata.model);
+                }
+            }
+            return false;
+        }
     }
 
     private static class Property {
         String name;
         String value;
+    }
+
+    private static class MojangUUIDResponse {
+        String id;
     }
 
     private static class TexturesResponse {
@@ -225,6 +250,11 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
         private static class Skin {
             String url;
+            Metadata metadata;
+        }
+
+        private static class Metadata {
+            String model;
         }
     }
 }
