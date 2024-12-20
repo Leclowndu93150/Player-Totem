@@ -10,7 +10,6 @@ import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -26,7 +25,6 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
     public TotemItemRenderer() {
         super(Minecraft.getInstance().getBlockEntityRenderDispatcher(), Minecraft.getInstance().getEntityModels());
-        //this.customSkin = ResourceLocation.fromNamespaceAndPath("playertotem", "textures/entity/steve.png");
         this.customSkin = null;
     }
 
@@ -49,32 +47,48 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
         switch (displayContext) {
             case GUI -> {
-                poseStack.translate(0, -3.25 / 16.0F, 0);
-                poseStack.mulPose(Axis.XP.rotationDegrees(30));
-                poseStack.mulPose(Axis.YP.rotationDegrees(225));
-                poseStack.scale(0.5F, 0.5F, 0.5F);
+                // rotation=[0,-180,0], translation=[-4.25,-4.25,0], scale=[0.5,0.5,0.49]
+                poseStack.translate(-4.25/16.0F, -4.25/16.0F, 0);
+                poseStack.mulPose(Axis.YP.rotationDegrees(180));
+                poseStack.scale(0.5F, 0.5F, 0.49F);
             }
             case GROUND -> {
-                poseStack.translate(0, 2 / 16.0F, 0);
-                poseStack.scale(0.5F, 0.5F, 0.5F);
+                // translation=[1.5,0,1.5], scale=[0.19,0.2,0.2]
+                poseStack.translate(1.5/16.0F, 0, 1.5/16.0F);
+                poseStack.scale(0.19F, 0.2F, 0.2F);
             }
-            case THIRD_PERSON_RIGHT_HAND, THIRD_PERSON_LEFT_HAND -> {
-                poseStack.translate(0.25 / 16.0F, 0.5 / 16.0F, 1.5 / 16.0F);
-                poseStack.mulPose(Axis.XP.rotationDegrees(0));
+            case THIRD_PERSON_RIGHT_HAND -> {
+                // rotation=[0,90,0], translation=[1.75,-0.25,0.25], scale=[0.2,0.2,0.2]
+                poseStack.translate(1.75/16.0F, -0.25/16.0F, 0.25/16.0F);
                 poseStack.mulPose(Axis.YP.rotationDegrees(90));
-                poseStack.mulPose(Axis.ZP.rotationDegrees(-10));
-                poseStack.scale(0.25F, 0.25F, 0.25F);
+                poseStack.scale(0.2F, 0.2F, 0.2F);
             }
-            case FIRST_PERSON_RIGHT_HAND, FIRST_PERSON_LEFT_HAND -> {
-                poseStack.translate(3 / 16.0F, 0.5 / 16.0F, 1.5 / 16.0F);
-                poseStack.mulPose(Axis.XP.rotationDegrees(0));
+            case THIRD_PERSON_LEFT_HAND -> {
+                // rotation=[0,90,0], translation=[1.75,-0.25,3.5], scale=[0.2,0.2,0.2]
+                poseStack.translate(1.75/16.0F, -0.25/16.0F, 3.5/16.0F);
                 poseStack.mulPose(Axis.YP.rotationDegrees(90));
-                poseStack.mulPose(Axis.ZP.rotationDegrees(-10));
-                poseStack.scale(0.25F, 0.25F, 0.25F);
+                poseStack.scale(0.2F, 0.2F, 0.2F);
+            }
+            case FIRST_PERSON_RIGHT_HAND -> {
+                // rotation=[0,103,0], translation=[-0.5,3,2], scale=[0.2,0.2,0.2]
+                poseStack.translate(-0.5/16.0F, 3/16.0F, 2/16.0F);
+                poseStack.mulPose(Axis.YP.rotationDegrees(103));
+                poseStack.scale(0.2F, 0.2F, 0.2F);
+            }
+            case FIRST_PERSON_LEFT_HAND -> {
+                // rotation=[0,103,0], translation=[0,3,5], scale=[0.2,0.2,0.2]
+                poseStack.translate(0, 3/16.0F, 5/16.0F);
+                poseStack.mulPose(Axis.YP.rotationDegrees(103));
+                poseStack.scale(0.2F, 0.2F, 0.2F);
+            }
+            case FIXED -> {
+                // rotation=[-5,0,0], translation=[3,-3,2], scale=[0.4,0.4,0.4]
+                poseStack.translate(3/16.0F, -3/16.0F, 2/16.0F);
+                poseStack.mulPose(Axis.XP.rotationDegrees(-5));
+                poseStack.scale(0.4F, 0.4F, 0.4F);
             }
             default -> {
                 poseStack.scale(0.4F, 0.4F, 0.4F);
-                poseStack.mulPose(Axis.XP.rotationDegrees(180));
             }
         }
 
@@ -94,6 +108,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
         poseStack.popPose();
 
+        //DEBUG TEXT
         poseStack.pushPose();
         poseStack.translate(0, 1, 0);
         poseStack.scale(0.01F, 0.01F, 0.01F);
@@ -112,5 +127,4 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
         poseStack.popPose();
     }
-
 }
