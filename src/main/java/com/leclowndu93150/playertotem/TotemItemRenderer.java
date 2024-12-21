@@ -18,7 +18,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -146,7 +145,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
                     Minecraft.getInstance().execute(() -> {
                         try {
                             DynamicTexture texture = new DynamicTexture(skinData.nativeImage);
-                            ResourceLocation textureLocation = ResourceLocation.fromNamespaceAndPath("playertotem", "skin_" + username.toLowerCase());
+                            ResourceLocation textureLocation = new ResourceLocation("playertotem", "skin_" + username.toLowerCase());
                             Minecraft.getInstance().getTextureManager().register(textureLocation, texture);
                             skinCache.put(username, textureLocation);
                             slimModelCache.put(username, skinData.isSlimModel);
@@ -171,7 +170,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
     private void setDefaultSkin(String username) {
         Minecraft.getInstance().execute(() -> {
-            skinCache.put(username, Minecraft.getInstance().player.getSkin().texture());
+            skinCache.put(username, Minecraft.getInstance().player.getSkinTextureLocation());
             slimModelCache.put(username, false);
         });
     }
@@ -184,17 +183,17 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         ResourceLocation skinLocation;
         boolean isSlimModel = false;
 
-        if (stack.has(DataComponents.CUSTOM_NAME)) {
-            String username = stack.get(DataComponents.CUSTOM_NAME).getString();
+        if (stack.hasCustomHoverName()) {
+            String username = stack.getHoverName().getString();
             if (!username.isEmpty() && (Minecraft.getInstance().screen == null ||
                     Minecraft.getInstance().screen instanceof InventoryScreen ||
                     Minecraft.getInstance().screen instanceof CreativeModeInventoryScreen)) {
                 loadSkinForName(username);
             }
-            skinLocation = skinCache.getOrDefault(username, Minecraft.getInstance().player.getSkin().texture());
+            skinLocation = skinCache.getOrDefault(username, Minecraft.getInstance().player.getSkinTextureLocation());
             isSlimModel = slimModelCache.getOrDefault(username, false);
         } else {
-            skinLocation = Minecraft.getInstance().player.getSkin().texture();
+            skinLocation = Minecraft.getInstance().player.getSkinTextureLocation();
         }
 
         PlayerModel<AbstractClientPlayer> modelToUse = isSlimModel ? slimPlayerModel : playerModel;
@@ -251,7 +250,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         if (PTMain.config.canMoveArms()) {
             modelToUse.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
         }
-        modelToUse.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, -1);
+        modelToUse.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, -1, -1, -1, 0);
 
         poseStack.popPose();
     }
