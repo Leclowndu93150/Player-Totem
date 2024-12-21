@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AnvilScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.model.PlayerModel;
@@ -185,9 +186,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
         if (stack.hasCustomHoverName()) {
             String username = stack.getHoverName().getString();
-            if (!username.isEmpty() && (Minecraft.getInstance().screen == null ||
-                    Minecraft.getInstance().screen instanceof InventoryScreen ||
-                    Minecraft.getInstance().screen instanceof CreativeModeInventoryScreen)) {
+            if (!username.isEmpty() && !(Minecraft.getInstance().screen instanceof AnvilScreen)) {
                 loadSkinForName(username);
             }
             skinLocation = skinCache.getOrDefault(username, Minecraft.getInstance().player.getSkinTextureLocation());
@@ -250,7 +249,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         if (PTMain.config.canMoveArms()) {
             modelToUse.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
         }
-        modelToUse.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, -1, -1, -1, 0);
+        modelToUse.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, 1, 1, 1, 1);
 
         poseStack.popPose();
     }

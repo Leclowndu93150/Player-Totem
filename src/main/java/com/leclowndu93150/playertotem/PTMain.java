@@ -10,6 +10,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModContainer;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
 @Mod(PTMain.MODID)
@@ -19,8 +20,10 @@ public class PTMain {
     static PTConfig config = new PTConfig();
 
     public PTMain() {
-        LOGGER.info("Player Totem mod loaded");
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        Registry.ITEMS.register(modEventBus);
         config.loadConfig();
+        LOGGER.info("Player Totem mod loaded");
     }
 
 }
