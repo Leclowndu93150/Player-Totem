@@ -33,8 +33,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static final Gson GSON = new Gson();
-    private final Map<String, String> uuidCache = new HashMap<>();
-    private final Map<String, ResourceLocation> skinCache = new HashMap<>();
+    private final Map<String, CompletableFuture<ResourceLocation>> skinFutures = new HashMap<>();
     private final Map<String, Boolean> slimModelCache = new HashMap<>();
 
     private PlayerModel<AbstractClientPlayer> playerModel;
@@ -55,74 +54,63 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         }
     }
 
-    private String fetchUUIDFromAPI(String username) {
-        try {
-            String uuidUrl = String.format("https://api.mojang.com/users/profiles/minecraft/%s", username);
-            String response = new Scanner(new URL(uuidUrl).openStream()).useDelimiter("\\A").next();
-            MojangUUIDResponse uuidData = GSON.fromJson(response, MojangUUIDResponse.class);
-            return uuidData.id;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    private void loadSkinForName(String username) {
-        if (skinCache.containsKey(username)) {
-            return;
-        }
-
-        String uuid = uuidCache.computeIfAbsent(username, this::fetchUUIDFromAPI);
-        if (uuid == null || uuid.isEmpty()) {
-            skinCache.put(username, Minecraft.getInstance().player.getSkin().texture());
-            slimModelCache.put(username, false);
-            return;
-        }
-
-        CompletableFuture.runAsync(() -> {
+    private CompletableFuture<String> fetchUUIDAsync(String username) {
+        return CompletableFuture.supplyAsync(() -> {
             try {
-                String profileUrl = String.format("https://sessionserver.mojang.com/session/minecraft/profile/%s", uuid);
-                String profileResponse = new Scanner(new URL(profileUrl).openStream()).useDelimiter("\\A").next();
-                MojangProfileResponse profileData = GSON.fromJson(profileResponse, MojangProfileResponse.class);
-
-                String skinUrl = profileData.getSkinURL();
-                boolean isSlimModel = profileData.isSlimModel();
-
-                if (skinUrl == null || skinUrl.isEmpty()) {
-                    throw new IOException("Skin URL is null or empty");
-                }
-
-                NativeImage nativeImage;
-                try (var stream = new URL(skinUrl).openStream()) {
-                    nativeImage = NativeImage.read(stream);
-                }
-
-                if (nativeImage == null) {
-                    throw new IOException("Failed to load NativeImage (null result)");
-                }
-
-                Minecraft.getInstance().execute(() -> {
-                    try {
-                        DynamicTexture texture = new DynamicTexture(nativeImage);
-                        ResourceLocation textureLocation = ResourceLocation.fromNamespaceAndPath("playertotem", "skin_" + username.toLowerCase());
-                        Minecraft.getInstance().getTextureManager().register(textureLocation, texture);
-                        skinCache.put(username, textureLocation);
-                        slimModelCache.put(username, isSlimModel);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        skinCache.put(username, Minecraft.getInstance().player.getSkin().texture());
-                        slimModelCache.put(username, false);
-                        nativeImage.close();
-                    }
-                });
-            } catch (Exception e) {
+                String uuidUrl = String.format("https://api.mojang.com/users/profiles/minecraft/%s", username);
+                String response = new Scanner(new URL(uuidUrl).openStream()).useDelimiter("\\A").next();
+                MojangUUIDResponse uuidData = GSON.fromJson(response, MojangUUIDResponse.class);
+                return uuidData.id;
+            } catch (IOException e) {
                 e.printStackTrace();
-                Minecraft.getInstance().execute(() -> {
-                    skinCache.put(username, Minecraft.getInstance().player.getSkin().texture());
-                    slimModelCache.put(username, false);
-                });
+                return null;
             }
         });
+    }
+
+    private CompletableFuture<ResourceLocation> fetchSkinAsync(String username) {
+        return fetchUUIDAsync(username).thenCompose(uuid -> {
+            if (uuid == null || uuid.isEmpty()) {
+                return CompletableFuture.completedFuture(Minecraft.getInstance().player.getSkin().texture());
+            }
+
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    String profileUrl = String.format("https://sessionserver.mojang.com/session/minecraft/profile/%s", uuid);
+                    String profileResponse = new Scanner(new URL(profileUrl).openStream()).useDelimiter("\\A").next();
+                    MojangProfileResponse profileData = GSON.fromJson(profileResponse, MojangProfileResponse.class);
+
+                    String skinUrl = profileData.getSkinURL();
+                    boolean isSlimModel = profileData.isSlimModel();
+
+                    if (skinUrl == null || skinUrl.isEmpty()) {
+                        throw new IOException("Skin URL is null or empty");
+                    }
+
+                    NativeImage nativeImage;
+                    try (var stream = new URL(skinUrl).openStream()) {
+                        nativeImage = NativeImage.read(stream);
+                    }
+
+                    if (nativeImage == null) {
+                        throw new IOException("Failed to load NativeImage (null result)");
+                    }
+
+                    DynamicTexture texture = new DynamicTexture(nativeImage);
+                    ResourceLocation textureLocation = ResourceLocation.fromNamespaceAndPath("playertotem", "skin_" + username.toLowerCase());
+                    Minecraft.getInstance().execute(() -> Minecraft.getInstance().getTextureManager().register(textureLocation, texture));
+                    slimModelCache.put(username, isSlimModel);
+                    return textureLocation;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return Minecraft.getInstance().player.getSkin().texture();
+                }
+            });
+        });
+    }
+
+    private CompletableFuture<ResourceLocation> getSkin(String username) {
+        return skinFutures.computeIfAbsent(username, this::fetchSkinAsync);
     }
 
     @Override
@@ -130,81 +118,75 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
                              MultiBufferSource buffer, int combinedLight, int combinedOverlay) {
         initializeModels();
 
-        ResourceLocation skinLocation;
-        boolean isSlimModel = false;
-
-        if (stack.has(DataComponents.CUSTOM_NAME)) {
-            String username = stack.get(DataComponents.CUSTOM_NAME).getString();
-            if (!username.isEmpty() && (Minecraft.getInstance().screen == null ||
-                    Minecraft.getInstance().screen instanceof InventoryScreen ||
-                    Minecraft.getInstance().screen instanceof CreativeModeInventoryScreen)) {
-                loadSkinForName(username);
-            }
-            skinLocation = skinCache.getOrDefault(username, Minecraft.getInstance().player.getSkin().texture());
-            isSlimModel = slimModelCache.getOrDefault(username, false);
-        } else {
-            skinLocation = Minecraft.getInstance().player.getSkin().texture();
+        if (!stack.has(DataComponents.CUSTOM_NAME)) {
+            return;
         }
 
-        PlayerModel<AbstractClientPlayer> modelToUse = isSlimModel ? slimPlayerModel : playerModel;
-
-        poseStack.pushPose();
-        switch (displayContext) {
-            case THIRD_PERSON_RIGHT_HAND -> {
-                poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.5, -0.6, -0.5);
-                poseStack.mulPose(Axis.YP.rotationDegrees(90f));
-                poseStack.scale(0.3F, 0.3F, 0.3F);
-            }
-            case THIRD_PERSON_LEFT_HAND -> {
-                poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.5, -0.6, -0.5);
-                poseStack.mulPose(Axis.YP.rotationDegrees(270f));
-                poseStack.scale(0.3F, 0.3F, 0.3F);
-            }
-            case FIRST_PERSON_RIGHT_HAND -> {
-                poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.60, -0.80, -0.45);
-                poseStack.mulPose(Axis.YP.rotationDegrees(70f));
-                poseStack.scale(0.3F, 0.3F, 0.3F);
-            }
-            case FIRST_PERSON_LEFT_HAND -> {
-                poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.3, -0.80, -0.45);
-                poseStack.mulPose(Axis.YP.rotationDegrees(280f));
-                poseStack.scale(0.3F, 0.3F, 0.3F);
-            }
-            case GROUND -> {
-                poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.5, -0.55, -0.5);
-                poseStack.scale(0.19F, 0.2F, 0.2F);
-            }
-            case GUI -> {
-                poseStack.translate(0.5D, 0.75D, 0D);
-                poseStack.mulPose(Axis.XP.rotationDegrees(-180f));
-                poseStack.scale(0.5F, 0.5F, 0.49F);
-            }
-            case FIXED -> {
-                poseStack.mulPose(Axis.XP.rotationDegrees(180f));
-                poseStack.translate(0.5, -0.7, -0.5);
-                poseStack.mulPose(Axis.YP.rotationDegrees(180f));
-                poseStack.scale(0.5F, 0.5F, 0.5F);
-            }
+        String username = stack.get(DataComponents.CUSTOM_NAME).getString();
+        if (username.isEmpty()) {
+            return;
         }
 
-        VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityTranslucent(skinLocation));
-        modelToUse.setAllVisible(true);
-        modelToUse.young = false;
+        getSkin(username).thenAccept(skinLocation -> {
+            PlayerModel<AbstractClientPlayer> modelToUse = slimModelCache.getOrDefault(username, false) ? slimPlayerModel : playerModel;
 
-        float tick = Minecraft.getInstance().player.tickCount;
-        if(PTMain.config.canMoveArms()){
-            modelToUse.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
-        }
-        modelToUse.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, -1);
+            poseStack.pushPose();
+            switch (displayContext) {
+                case THIRD_PERSON_RIGHT_HAND -> {
+                    poseStack.mulPose(Axis.XP.rotationDegrees(180f));
+                    poseStack.translate(0.5, -0.6, -0.5);
+                    poseStack.mulPose(Axis.YP.rotationDegrees(90f));
+                    poseStack.scale(0.3F, 0.3F, 0.3F);
+                }
+                case THIRD_PERSON_LEFT_HAND -> {
+                    poseStack.mulPose(Axis.XP.rotationDegrees(180f));
+                    poseStack.translate(0.5, -0.6, -0.5);
+                    poseStack.mulPose(Axis.YP.rotationDegrees(270f));
+                    poseStack.scale(0.3F, 0.3F, 0.3F);
+                }
+                case FIRST_PERSON_RIGHT_HAND -> {
+                    poseStack.mulPose(Axis.XP.rotationDegrees(180f));
+                    poseStack.translate(0.60, -0.80, -0.45);
+                    poseStack.mulPose(Axis.YP.rotationDegrees(70f));
+                    poseStack.scale(0.3F, 0.3F, 0.3F);
+                }
+                case FIRST_PERSON_LEFT_HAND -> {
+                    poseStack.mulPose(Axis.XP.rotationDegrees(180f));
+                    poseStack.translate(0.3, -0.80, -0.45);
+                    poseStack.mulPose(Axis.YP.rotationDegrees(280f));
+                    poseStack.scale(0.3F, 0.3F, 0.3F);
+                }
+                case GROUND -> {
+                    poseStack.mulPose(Axis.XP.rotationDegrees(180f));
+                    poseStack.translate(0.5, -0.55, -0.5);
+                    poseStack.scale(0.19F, 0.2F, 0.2F);
+                }
+                case GUI -> {
+                    poseStack.translate(0.5D, 0.75D, 0D);
+                    poseStack.mulPose(Axis.XP.rotationDegrees(-180f));
+                    poseStack.scale(0.5F, 0.5F, 0.49F);
+                }
+                case FIXED -> {
+                    poseStack.mulPose(Axis.XP.rotationDegrees(180f));
+                    poseStack.translate(0.5, -0.7, -0.5);
+                    poseStack.mulPose(Axis.YP.rotationDegrees(180f));
+                    poseStack.scale(0.5F, 0.5F, 0.5F);
+                }
+            }
 
-        poseStack.popPose();
+            VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityTranslucent(skinLocation));
+            modelToUse.setAllVisible(true);
+            modelToUse.young = false;
+
+            float tick = Minecraft.getInstance().player.tickCount;
+            if (PTMain.config.canMoveArms()) {
+                modelToUse.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
+            }
+            modelToUse.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, -1);
+
+            poseStack.popPose();
+        });
     }
-
     private static class MojangProfileResponse {
         String id;
         String name;
