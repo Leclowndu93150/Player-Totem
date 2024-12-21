@@ -5,6 +5,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AnvilScreen;
 import net.minecraft.client.model.PlayerModel;
@@ -33,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
+public class TotemItemRenderer implements BuiltinItemRendererRegistry.DynamicItemRenderer {
 
     private static final Gson GSON = new Gson();
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().executor(Executors.newFixedThreadPool(2)).build();
@@ -48,7 +49,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
     private PlayerModel<AbstractClientPlayer> slimPlayerModel;
 
     public TotemItemRenderer() {
-        super(Minecraft.getInstance().getBlockEntityRenderDispatcher(), Minecraft.getInstance().getEntityModels());
+        super();
     }
 
     private void initializeModels() {
@@ -176,7 +177,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
     }
 
     @Override
-    public void renderByItem(ItemStack stack, ItemDisplayContext displayContext, PoseStack poseStack,
+    public void render(ItemStack stack, ItemDisplayContext displayContext, PoseStack poseStack,
                              MultiBufferSource buffer, int combinedLight, int combinedOverlay) {
         initializeModels();
 
