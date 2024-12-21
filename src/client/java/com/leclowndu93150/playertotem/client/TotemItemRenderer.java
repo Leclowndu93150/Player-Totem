@@ -13,11 +13,11 @@ import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -146,7 +146,7 @@ public class TotemItemRenderer implements BuiltinItemRendererRegistry.DynamicIte
                     Minecraft.getInstance().execute(() -> {
                         try {
                             DynamicTexture texture = new DynamicTexture(skinData.nativeImage);
-                            ResourceLocation textureLocation = new ResourceLocation("playertotem", "skin_" + username.toLowerCase());
+                            ResourceLocation textureLocation = ResourceLocation.fromNamespaceAndPath("playertotem", "skin_" + username.toLowerCase());
                             Minecraft.getInstance().getTextureManager().register(textureLocation, texture);
                             skinCache.put(username, textureLocation);
                             slimModelCache.put(username, skinData.isSlimModel);
@@ -171,7 +171,7 @@ public class TotemItemRenderer implements BuiltinItemRendererRegistry.DynamicIte
 
     private void setDefaultSkin(String username) {
         Minecraft.getInstance().execute(() -> {
-            skinCache.put(username, Minecraft.getInstance().player.getSkinTextureLocation());
+            skinCache.put(username, Minecraft.getInstance().player.getSkin().texture());
             slimModelCache.put(username, false);
         });
     }
@@ -184,15 +184,15 @@ public class TotemItemRenderer implements BuiltinItemRendererRegistry.DynamicIte
         ResourceLocation skinLocation;
         boolean isSlimModel = false;
 
-        if (stack.hasCustomHoverName()) {
-            String username = stack.getHoverName().getString();
+        if (stack.has(DataComponents.CUSTOM_NAME)) {
+            String username = stack.get(DataComponents.CUSTOM_NAME).getString();
             if (!username.isEmpty() && !(Minecraft.getInstance().screen instanceof AnvilScreen)) {
                 loadSkinForName(username);
             }
-            skinLocation = skinCache.getOrDefault(username, Minecraft.getInstance().player.getSkinTextureLocation());
+            skinLocation = skinCache.getOrDefault(username, Minecraft.getInstance().player.getSkin().texture());
             isSlimModel = slimModelCache.getOrDefault(username, false);
         } else {
-            skinLocation = Minecraft.getInstance().player.getSkinTextureLocation();
+            skinLocation = Minecraft.getInstance().player.getSkin().texture();
         }
 
         PlayerModel<AbstractClientPlayer> modelToUse = isSlimModel ? slimPlayerModel : playerModel;
@@ -249,7 +249,7 @@ public class TotemItemRenderer implements BuiltinItemRendererRegistry.DynamicIte
         if (PTMainClient.config.canMoveArms()) {
             modelToUse.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
         }
-        modelToUse.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, 1, 1, 1, 1);
+        modelToUse.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, -1);
 
         poseStack.popPose();
     }
