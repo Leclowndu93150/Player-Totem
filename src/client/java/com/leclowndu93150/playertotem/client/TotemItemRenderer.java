@@ -15,12 +15,14 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
@@ -34,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-public class TotemItemRenderer implements BuiltinItemRendererRegistry.DynamicItemRenderer {
+public class TotemItemRenderer implements SpecialModelRenderer {
 
     private static final Gson GSON = new Gson();
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().executor(Executors.newFixedThreadPool(2)).build();
@@ -252,6 +254,12 @@ public class TotemItemRenderer implements BuiltinItemRendererRegistry.DynamicIte
         modelToUse.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, -1);
 
         poseStack.popPose();
+    }
+
+    @Nullable
+    @Override
+    public Object extractArgument(ItemStack stack) {
+        return null;
     }
 
     private record SkinData(NativeImage nativeImage, boolean isSlimModel) {}
