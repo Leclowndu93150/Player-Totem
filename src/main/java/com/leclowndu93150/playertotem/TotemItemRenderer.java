@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AnvilScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.model.PlayerModel;
@@ -186,9 +187,7 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
         if (stack.has(DataComponents.CUSTOM_NAME)) {
             String username = stack.get(DataComponents.CUSTOM_NAME).getString();
-            if (!username.isEmpty() && (Minecraft.getInstance().screen == null ||
-                    Minecraft.getInstance().screen instanceof InventoryScreen ||
-                    Minecraft.getInstance().screen instanceof CreativeModeInventoryScreen)) {
+            if (!username.isEmpty() && !(Minecraft.getInstance().screen instanceof AnvilScreen)) {
                 loadSkinForName(username);
             }
             skinLocation = skinCache.getOrDefault(username, Minecraft.getInstance().player.getSkin().texture());
