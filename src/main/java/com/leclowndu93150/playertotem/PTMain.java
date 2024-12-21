@@ -18,9 +18,11 @@ import org.slf4j.Logger;
 public class PTMain {
     public static final String MODID = "playertotem";
     private static final Logger LOGGER = LogUtils.getLogger();
+    static PTConfig config = new PTConfig();
 
     public PTMain(IEventBus modEventBus, ModContainer modContainer) {
-
+        LOGGER.info("Player Totem mod loaded");
+        config.loadConfig();
     }
 
     @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)

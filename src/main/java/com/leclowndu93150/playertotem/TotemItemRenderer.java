@@ -197,7 +197,9 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         modelToUse.young = false;
 
         float tick = Minecraft.getInstance().player.tickCount;
-        modelToUse.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
+        if(PTMain.config.canMoveArms()){
+            modelToUse.setupAnim(Minecraft.getInstance().player, 0, 0, tick, 0, 0);
+        }
         modelToUse.renderToBuffer(poseStack, vertexConsumer, combinedLight, OverlayTexture.NO_OVERLAY, -1);
 
         poseStack.popPose();
