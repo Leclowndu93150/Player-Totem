@@ -12,15 +12,13 @@ public class TotemItem extends Item {
         super(properties);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static TotemItemRenderer TOTEM_ITEM_RENDERER = new TotemItemRenderer();
-
     @Override
+    @OnlyIn(Dist.CLIENT)
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
         consumer.accept(new IClientItemExtensions() {
             @Override
             public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                return TOTEM_ITEM_RENDERER;
+                return ClientOnly.TOTEM_ITEM_RENDERER;
             }
         });
     }
