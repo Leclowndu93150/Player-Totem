@@ -1,65 +1,30 @@
 package com.leclowndu93150.playertotem;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
 
 public class PTConfig {
+    private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    private static final ForgeConfigSpec SPEC;
 
-    private static final Path CONFIG_PATH = Paths.get("config", "playertotem.json");
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    public static final ForgeConfigSpec.BooleanValue RENDER_INSTEAD_OF_ROCKET;
 
-    private boolean armsMove = true;
+    static {
+        BUILDER.push("My Mini-Me Settings");
 
-    public PTConfig() {
-        loadConfig();
+        RENDER_INSTEAD_OF_ROCKET = BUILDER.comment("If true, renders player totem on the right instead of the left hand")
+                .define("renderInsteadOfRocket", false);
+
+        BUILDER.pop();
+        SPEC = BUILDER.build();
     }
 
-    /**
-     * Gets the value of armsMove.
-     *
-     * @return true if arms move, false otherwise.
-     */
-    public boolean canMoveArms() {
-        return armsMove;
+    public static void register() {
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
     }
 
-    /**
-     * Loads the configuration from the JSON file or creates a default one if it doesn't exist.
-     */
-    public void loadConfig() {
-        if (Files.exists(CONFIG_PATH)) {
-            try {
-                String json = Files.readString(CONFIG_PATH);
-                JsonObject configObject = GSON.fromJson(json, JsonObject.class);
-                if (configObject.has("armsMove")) {
-                    armsMove = configObject.get("armsMove").getAsBoolean();
-                }
-            } catch (IOException e) {
-                System.err.println("Failed to load config: " + e.getMessage());
-                saveDefaultConfig();
-            }
-        } else {
-            saveDefaultConfig();
-        }
-    }
-
-    /**
-     * Saves the default configuration to the JSON file.
-     */
-    private void saveDefaultConfig() {
-        JsonObject defaultConfig = new JsonObject();
-        defaultConfig.addProperty("armsMove", armsMove);
-
-        try {
-            Files.createDirectories(CONFIG_PATH.getParent());
-            Files.writeString(CONFIG_PATH, GSON.toJson(defaultConfig));
-        } catch (IOException e) {
-            System.err.println("Failed to save default config: " + e.getMessage());
-        }
+    public static boolean shouldRenderInsteadOfRocket() {
+        return RENDER_INSTEAD_OF_ROCKET.get();
     }
 }
