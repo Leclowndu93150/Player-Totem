@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -28,6 +29,10 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
 
     // Fields to store rotation values
     private float yBodyRot, yRot, yRotO, yBodyRotO, xRot, xRotO, yHeadRotO, yHeadRot;
+
+    // Fields to store swinging state
+    private boolean wasSwinging;
+    private InteractionHand originalSwingingArm;
 
     private static boolean isRenderingTotem = false;
 
@@ -122,6 +127,16 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         yHeadRotO = player.yHeadRotO;
         yHeadRot = player.yHeadRot;
 
+        // Save swinging state
+        wasSwinging = player.swinging;
+        originalSwingingArm = player.swingingArm;
+
+        // If flipping items and player is swinging, flip the arm only for rendering
+        if (PTConfig.shouldFlipHeldItemPosition() && player.swinging) {
+            player.swingingArm = player.swingingArm == InteractionHand.MAIN_HAND ?
+                    InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+        }
+
         // Set fixed rotations for rendering
         player.yBodyRot = 180.0F;
         player.setYRot(180.0F);
@@ -143,6 +158,10 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
         player.xRotO = xRotO;
         player.yHeadRotO = yHeadRotO;
         player.yHeadRot = yHeadRot;
+
+        // Restore swinging state
+        player.swinging = wasSwinging;
+        player.swingingArm = originalSwingingArm;
     }
 
     private void savePlayerEquipment(AbstractClientPlayer player) {
