@@ -1,4 +1,4 @@
-package com.leclowndu93150.playertotem;
+package com.leclowndu93150.myminime;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
@@ -99,14 +100,25 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
     }
 
     private void checkAndReplaceTotemItems(AbstractClientPlayer player, ItemStack currentTotem) {
-        // Check if main hand item is our totem
-        if (isSameTotemItem(player.getItemBySlot(EquipmentSlot.MAINHAND), currentTotem)) {
+        // Check if main hand or offhand item is our totem
+        boolean mainHandHasTotem = isSameTotemItem(player.getItemBySlot(EquipmentSlot.MAINHAND), currentTotem);
+        boolean offHandHasTotem = isSameTotemItem(player.getItemBySlot(EquipmentSlot.OFFHAND), currentTotem);
+
+        if (mainHandHasTotem) {
             player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
         }
 
-        // Check if offhand item is our totem
-        if (isSameTotemItem(player.getItemBySlot(EquipmentSlot.OFFHAND), currentTotem)) {
+        if (offHandHasTotem) {
             player.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+        }
+
+        // If the flip setting is enabled, swap the mainhand and offhand items
+        if (PTConfig.shouldFlipHeldItemPosition()) {
+            ItemStack mainHandCopy = player.getItemBySlot(EquipmentSlot.MAINHAND).copy();
+            ItemStack offHandCopy = player.getItemBySlot(EquipmentSlot.OFFHAND).copy();
+
+            player.setItemSlot(EquipmentSlot.MAINHAND, offHandCopy);
+            player.setItemSlot(EquipmentSlot.OFFHAND, mainHandCopy);
         }
     }
 
@@ -122,13 +134,11 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
     private void setupDisplayContextTransformation(ItemDisplayContext displayContext, PoseStack poseStack, AbstractClientPlayer playerToRender) {
         switch (displayContext) {
             case THIRD_PERSON_RIGHT_HAND -> {
-                //poseStack.mulPose(Axis.XP.rotationDegrees(180f));
                 poseStack.translate(0.5, 0.2, 0.5);
                 poseStack.mulPose(Axis.YP.rotationDegrees(90f));
                 poseStack.scale(0.3F, 0.3F, 0.3F);
             }
             case THIRD_PERSON_LEFT_HAND -> {
-                //poseStack.mulPose(Axis.XP.rotationDegrees(180f));
                 poseStack.translate(0.5, 0.2, 0.5);
                 poseStack.mulPose(Axis.YP.rotationDegrees(270f));
                 poseStack.scale(0.3F, 0.3F, 0.3F);
@@ -137,11 +147,9 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
                 if (playerToRender.isFallFlying()) {
                     poseStack.translate(0.9, 0.2, 0);
                     poseStack.mulPose(Axis.YP.rotationDegrees(368f));
-                    //poseStack.mulPose(Axis.ZP.rotationDegrees(-180f));
                     poseStack.mulPose(Axis.XP.rotationDegrees(-10f));
                     poseStack.scale(0.45F, 0.45F, 0.45F);
                 } else {
-                    //poseStack.mulPose(Axis.XP.rotationDegrees(180f));
                     poseStack.translate(0.9, 0.2, 0);
                     poseStack.mulPose(Axis.YP.rotationDegrees(98f));
                     poseStack.scale(0.45F, 0.45F, 0.45F);
@@ -175,7 +183,6 @@ public class TotemItemRenderer extends BlockEntityWithoutLevelRenderer {
                 poseStack.scale(0.5F, 0.5F, 0.49F);
             }
             case FIXED -> {
-                //poseStack.mulPose(Axis.XP.rotationDegrees(180f));
                 poseStack.translate(0.5D, 0D, 0.45D);
                 poseStack.scale(0.5F, 0.5F, 0.5F);
             }

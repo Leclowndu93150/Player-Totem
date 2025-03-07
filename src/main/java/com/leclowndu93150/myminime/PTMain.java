@@ -1,24 +1,12 @@
-package com.leclowndu93150.playertotem;
+package com.leclowndu93150.myminime;
 
 import com.mojang.logging.LogUtils;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
-import net.minecraft.world.item.Items;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.RenderHandEvent;
-import net.minecraftforge.client.extensions.common.IClientItemExtensions;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModContainer;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;

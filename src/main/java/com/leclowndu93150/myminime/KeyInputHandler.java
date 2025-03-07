@@ -1,7 +1,5 @@
-package com.leclowndu93150.playertotem;
+package com.leclowndu93150.myminime;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;

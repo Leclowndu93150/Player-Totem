@@ -1,4 +1,4 @@
-package com.leclowndu93150.playertotem;
+package com.leclowndu93150.myminime;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.api.distmarker.Dist;

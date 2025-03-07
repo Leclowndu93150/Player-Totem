@@ -1,4 +1,4 @@
-package com.leclowndu93150.playertotem;
+package com.leclowndu93150.myminime;
 
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
