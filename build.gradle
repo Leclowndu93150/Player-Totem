@@ -1,3 +1,4 @@
+
 plugins {
     id 'java-library'
     id 'maven-publish'
@@ -95,7 +96,13 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 
 dependencies {
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
 
+mixin {
+    add sourceSets.main, "${mod_id}.refmap.json"
+
+    config "${mod_id}.mixins.json"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -118,6 +125,12 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
     into "build/generated/sources/modMetadata"
 }
 
+jar {
+    manifest.attributes([
+            "MixinConfigs": "myminime.mixins.json"
+    ])
+}
+
 // Include the output of "generateModMetadata" as an input directory for the build
 // this works with both building through Gradle and the IDE.
 sourceSets.main.resources.srcDir generateModMetadata
@@ -137,6 +150,7 @@ publishing {
         }
     }
 }
+
 
 // IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.
 idea {
